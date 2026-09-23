@@ -26,5 +26,5 @@ COPY . .
 # Expose port
 EXPOSE 8080
 
-# Command to run migrations and start the app
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Command to start the app (Migrations are handled offline)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
