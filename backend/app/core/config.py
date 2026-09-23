@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, Any
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Pensive RAG System"
@@ -11,6 +12,16 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: Optional[str] = "postgres"
     POSTGRES_DB: Optional[str] = "pensive_db"
     DATABASE_URL: str
+    
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v.startswith("postgresql://") and not v.startswith("postgresql+asyncpg://"):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
     
     # ChromaDB
     CHROMA_HOST: str = "localhost"
