@@ -585,8 +585,8 @@ export default function BookContextForm() {
               ) : (
                 formData.characters.map((char, idx) => (
                   <div key={idx} style={{
-                    display: 'grid',
-                    gridTemplateColumns: '120px 80px 1fr 30px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
                     gap: '8px',
                     alignItems: 'center',
                     padding: '8px',
@@ -597,7 +597,7 @@ export default function BookContextForm() {
                     <input
                       type="text"
                       className="form-input"
-                      style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                      style={{ flex: '1 1 120px', padding: '4px 8px', fontSize: '0.78rem' }}
                       value={char.name || ''}
                       onChange={(e) => handleCharacterChange(idx, 'name', e.target.value)}
                       onBlur={handleCharacterBlur}
@@ -606,7 +606,7 @@ export default function BookContextForm() {
                     <input
                       type="text"
                       className="form-input"
-                      style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                      style={{ flex: '1 1 100px', padding: '4px 8px', fontSize: '0.78rem' }}
                       value={char.role || ''}
                       onChange={(e) => handleCharacterChange(idx, 'role', e.target.value)}
                       onBlur={handleCharacterBlur}
@@ -615,7 +615,7 @@ export default function BookContextForm() {
                     <input
                       type="text"
                       className="form-input"
-                      style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                      style={{ flex: '2 1 150px', padding: '4px 8px', fontSize: '0.78rem' }}
                       value={char.description || ''}
                       onChange={(e) => handleCharacterChange(idx, 'description', e.target.value)}
                       onBlur={handleCharacterBlur}
