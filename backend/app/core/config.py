@@ -7,9 +7,9 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Database
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_USER: Optional[str] = "postgres"
+    POSTGRES_PASSWORD: Optional[str] = "postgres"
+    POSTGRES_DB: Optional[str] = "pensive_db"
     DATABASE_URL: str
     
     # ChromaDB
@@ -17,12 +17,12 @@ class Settings(BaseSettings):
     CHROMA_PORT: int = 8000
     
     # Security
-    SECRET_KEY: str
+    SECRET_KEY: str = "default_secret_key_change_in_production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # Azure Phi-4 Configuration
-    PHI4_API_KEY: str
+    PHI4_API_KEY: Optional[str] = None
     PHI4_ENDPOINT: str = "https://apistoopen.services.ai.azure.com/openai/v1"
     PHI4_DEPLOYMENT: str = "Phi-4"
 
