@@ -17,7 +17,11 @@ else:
         future=True,
         pool_pre_ping=True,
         pool_size=20,
-        max_overflow=10
+        max_overflow=10,
+        connect_args={
+            "prepared_statement_cache_size": 0,
+            "statement_cache_size": 0
+        }
     )
 
 # Async session factory
