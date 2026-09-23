@@ -8,38 +8,46 @@ from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 from app.core.cache import cache_rag
 
-# Load model locally
-try:
-    print("Loading SentenceTransformer model 'all-MiniLM-L6-v2' locally...")
-    # Override cache dir if needed, using the F: drive workspace to prevent space issues
-    os.environ["HF_HOME"] = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "temp", "hf_cache")
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("SentenceTransformer loaded successfully.")
-except Exception as e:
-    print(f"Error loading SentenceTransformer: {e}")
-    embedding_model = None
+# Lazy load model locally to save memory on server boot
+embedding_model = None
 
-# Initialize ChromaDB Client with fallback to local persistent db
+def get_embedding_model():
+    global embedding_model
+    if embedding_model is None:
+        try:
+            print("Loading SentenceTransformer model 'all-MiniLM-L6-v2' locally...")
+            os.environ["HF_HOME"] = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "temp", "hf_cache")
+            embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            print("SentenceTransformer loaded successfully.")
+        except Exception as e:
+            print(f"Error loading SentenceTransformer: {e}")
+    return embedding_model
+
 chroma_client = None
-try:
-    print(f"Attempting to connect to ChromaDB HTTP Server at {settings.CHROMA_HOST}:{settings.CHROMA_PORT}...")
-    chroma_client = chromadb.HttpClient(
-        host=settings.CHROMA_HOST,
-        port=settings.CHROMA_PORT,
-        settings=ChromaSettings(anonymized_telemetry=False)
-    )
-    # Check connection
-    chroma_client.heartbeat()
-    print("Connected to remote ChromaDB server successfully.")
-except Exception as e:
-    print(f"Could not connect to ChromaDB server ({e}). Falling back to local persistent storage...")
-    local_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "chroma_local"
-    )
-    os.makedirs(local_path, exist_ok=True)
-    chroma_client = chromadb.PersistentClient(path=local_path)
-    print(f"Local ChromaDB client initialized at: {local_path}")
+
+def get_chroma_client():
+    global chroma_client
+    if chroma_client is None:
+        try:
+            print(f"Attempting to connect to ChromaDB HTTP Server at {settings.CHROMA_HOST}:{settings.CHROMA_PORT}...")
+            client = chromadb.HttpClient(
+                host=settings.CHROMA_HOST,
+                port=settings.CHROMA_PORT,
+                settings=ChromaSettings(anonymized_telemetry=False)
+            )
+            client.heartbeat()
+            print("Connected to remote ChromaDB server successfully.")
+            chroma_client = client
+        except Exception as e:
+            print(f"Could not connect to ChromaDB server ({e}). Falling back to local persistent storage...")
+            local_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                "chroma_local"
+            )
+            os.makedirs(local_path, exist_ok=True)
+            chroma_client = chromadb.PersistentClient(path=local_path)
+            print(f"Local ChromaDB client initialized at: {local_path}")
+    return chroma_client
 
 def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[str]:
     """Split text into overlapping chunks."""
@@ -59,14 +67,17 @@ def get_or_create_collection(project_id: str, bucket: str = "author_material"):
     if bucket not in ["author_material", "market_research"]:
         bucket = "author_material"
     collection_name = f"project_{project_id.replace('-', '_')}_{bucket}"
-    return chroma_client.get_or_create_collection(
+    
+    client = get_chroma_client()
+    return client.get_or_create_collection(
         name=collection_name,
         metadata={"hnsw:space": "cosine"}
     )
 
 async def index_document(project_id: str, document_id: str, text: str, bucket: str = "author_material"):
     """Chunk, embed, and index a document into ChromaDB."""
-    if not embedding_model:
+    model = get_embedding_model()
+    if not model:
         raise ValueError("Embedding model not loaded")
         
     chunks = chunk_text(text)
@@ -76,7 +87,7 @@ async def index_document(project_id: str, document_id: str, text: str, bucket: s
     collection = get_or_create_collection(project_id, bucket)
     
     # Generate embeddings locally
-    embeddings = embedding_model.encode(chunks).tolist()
+    embeddings = model.encode(chunks).tolist()
     
     ids = [f"{document_id}_{i}" for i in range(len(chunks))]
     metadatas = [{"document_id": document_id, "chunk_index": i} for i in range(len(chunks))]
@@ -96,12 +107,13 @@ async def index_document(project_id: str, document_id: str, text: str, bucket: s
 @cache_rag()
 async def retrieve_context(project_id: str, query: str, bucket: str = "author_material", top_k: int = 5) -> List[str]:
     """Embed query and search ChromaDB for the most similar chunks."""
-    if not embedding_model:
+    model = get_embedding_model()
+    if not model:
         return []
         
     try:
         collection = get_or_create_collection(project_id, bucket)
-        query_embedding = embedding_model.encode(query).tolist()
+        query_embedding = model.encode(query).tolist()
         
         results = collection.query(
             query_embeddings=[query_embedding],

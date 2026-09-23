@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Document
-from app.services.rag_service import get_or_create_collection, embedding_model
+from app.services.rag_service import get_or_create_collection, get_embedding_model
 
 async def check_originality(
     project_id: str,
@@ -14,7 +14,8 @@ async def check_originality(
     """
     Check the originality of a draft against project documents using local ChromaDB vectors.
     """
-    if not draft_content.strip() or not embedding_model:
+    model = get_embedding_model()
+    if not draft_content.strip() or not model:
         return {
             "overall_similarity": 0.0,
             "flagged_items": []
@@ -45,7 +46,7 @@ async def check_originality(
         doc_map = {str(d.id): d.filename for d in docs}
 
         # Embed all query sentences in one batch for performance
-        sentence_embeddings = embedding_model.encode(sentences).tolist()
+        sentence_embeddings = model.encode(sentences).tolist()
         
         # Query ChromaDB for each sentence
         for i, sentence in enumerate(sentences):
