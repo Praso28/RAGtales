@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ragtales-backend
+    env: docker
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
