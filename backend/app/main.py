@@ -25,16 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def on_startup():
-    from app.core.database import engine
-    from app.models.base import Base
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        print("Database tables created successfully.")
-    except Exception as e:
-        print(f"Error creating database tables: {e}")
+
 
 @app.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db)):
