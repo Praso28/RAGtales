@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pensive_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pensive_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pensive_password}
+      POSTGRES_DB: ${POSTGRES_DB:-pensive_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: pensive_chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: pensive_backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-pensive_user}:${POSTGRES_PASSWORD:-pensive_password}@postgres:5432/${POSTGRES_DB:-pensive_db}
+      - POSTGRES_USER=${POSTGRES_USER:-pensive_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-pensive_password}
+      - POSTGRES_DB=${POSTGRES_DB:-pensive_db}
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - SECRET_KEY=${SECRET_KEY:-supersecretkey_for_local_development}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - PHI4_API_KEY=${PHI4_API_KEY:-dummy_key_replace_in_production}
+      - PHI4_ENDPOINT=${PHI4_ENDPOINT:-https://apistoopen.services.ai.azure.com/openai/v1}
+      - PHI4_DEPLOYMENT=${PHI4_DEPLOYMENT:-Phi-4}
+      - LLM_PROVIDER=${LLM_PROVIDER:-phi4}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    volumes:
+      - ./backend/uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: pensive_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chroma_data:
+

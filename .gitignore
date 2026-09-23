@@ -1,0 +1,41 @@
+# Environment variables
+.env
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases & storage
+*.db
+backend/pensive.db
+backend/chroma_local/
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+*.log
+backend/uvicorn.log
+
+# Node dependency directories
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
