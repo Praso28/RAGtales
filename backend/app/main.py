@@ -19,7 +19,11 @@ app.add_middleware(LoggingMiddleware)
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For development. In production, specify origins.
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "https://frontend-eight-eosin-72.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
